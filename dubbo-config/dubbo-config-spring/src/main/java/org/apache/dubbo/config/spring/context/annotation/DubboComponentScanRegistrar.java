@@ -70,6 +70,14 @@ public class DubboComponentScanRegistrar implements ImportBeanDefinitionRegistra
      */
     private void registerServiceAnnotationBeanPostProcessor(Set<String> packagesToScan, BeanDefinitionRegistry registry) {
 
+        /**
+         * 调用 ServiceAnnotationBeanPostProcessor 的构造方法，将扫包范围 packagesToScan 传进去
+         *
+         * ServiceAnnotationBeanPostProcessor 实现了 BeanDefinitionRegistryPostProcessor 接口
+         *
+         * BeanFactoryPostProcessor是spring bean的后置处理器，在 bean definition 加载完成之后调用 postProcessBeanFactory()
+         * BeanDefinitionRegistryPostProcessor#postProcessBeanDefinitionRegistry(),该方法用来注册更多的bean到spring容器中
+         */
         BeanDefinitionBuilder builder = rootBeanDefinition(ServiceAnnotationBeanPostProcessor.class);
         builder.addConstructorArgValue(packagesToScan);
         builder.setRole(BeanDefinition.ROLE_INFRASTRUCTURE);

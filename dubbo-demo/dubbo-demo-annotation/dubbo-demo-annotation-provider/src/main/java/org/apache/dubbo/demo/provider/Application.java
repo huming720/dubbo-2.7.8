@@ -26,6 +26,15 @@ import org.springframework.context.annotation.PropertySource;
 
 public class Application {
     public static void main(String[] args) throws Exception {
+
+        /**
+         * AnnotationConfigApplicationContext 构造器会调用refresh()初始化
+         * ApplicationContext初始化完成 后调用 finishRefresh() 广播事件 【ContextRefreshedEvent】
+         *
+         * 其中DubboBootstrapApplicationListener 会监听ContextRefreshedEvent 事件
+         * 那么必然会有一个地方去注册监听  @See ServiceClassPostProcessor#postProcessBeanDefinitionRegistry
+         *
+         */
         AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(ProviderConfiguration.class);
         context.start();
         System.in.read();
