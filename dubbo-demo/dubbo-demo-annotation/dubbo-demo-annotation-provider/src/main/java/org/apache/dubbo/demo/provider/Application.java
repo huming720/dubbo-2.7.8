@@ -31,6 +31,11 @@ public class Application {
         System.in.read();
     }
 
+    /**
+     * @EnableDubbo ==> DubboComponentScan ==> DubboComponentScanRegistrar
+     *
+     * ImportBeanDefinitionRegistrar动态注入bena(扫描识别@DubboService)
+     */
     @Configuration
     @EnableDubbo(scanBasePackages = "org.apache.dubbo.demo.provider")
     @PropertySource("classpath:/spring/dubbo-provider.properties")
