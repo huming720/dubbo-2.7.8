@@ -78,6 +78,48 @@ import static org.apache.dubbo.common.constants.CommonConstants.REMOVE_VALUE_PRE
  * @see org.apache.dubbo.common.extension.SPI
  * @see org.apache.dubbo.common.extension.Adaptive
  * @see org.apache.dubbo.common.extension.Activate
+ *
+ *
+ * 扩展点：
+ *    Java中的spi(ServiceLoader)
+ *    Spring中的SpringFactoriesLoader
+ *    Dubbo中的SPI
+ *
+ * 思想：基于约定的路径下制定配置文件，通过配置的方式轻松实现功能的扩展
+ *
+ * 路径：/META-INF/dubbo;/META-INF/dubbo/internal
+ *
+ * 文件名：org.apache.dubbo.rpc.cluster.LoadBalance
+ * 内容：
+ *      random=org.apache.dubbo.rpc.cluster.loadbalance.RandomLoadBalance
+ *      roundrobin=org.apache.dubbo.rpc.cluster.loadbalance.RoundRobinLoadBalance
+ *      leastactive=org.apache.dubbo.rpc.cluster.loadbalance.LeastActiveLoadBalance
+ *      consistenthash=org.apache.dubbo.rpc.cluster.loadbalance.ConsistentHashLoadBalance
+ *      shortestresponse=org.apache.dubbo.rpc.cluster.loadbalance.ShortestResponseLoadBalance
+ *
+ * 1.指定名称的扩展点
+ *      ExtensionLoader.getExtensionLoader(xxx.class).getExtension(name);
+ *      RandomLoadBalance rd = ExtensionLoader.getExtensionLoader(Loadbalance.class).getExtension("random");
+ *
+ *  解析文件，Properties文件的解析
+ *  把解析出来的内容存储在内存中key(name) newInstance反射得到实例对象
+ *
+ * 2.自适应扩展点：在运行期间，根据上下文来决定当前返回哪个扩展点（动态代理、自动适配）
+ *      ExtensionLoader.getExtensionLoader(xxx.class).getAdaptiveExtension();
+ *      Protocol protocol = ExtensionLoader.getExtensionLoader(Protocol.class).getAdaptiveExtension();
+ *      ==》 Protocol$Adaptive
+ *
+ *  自适应扩展点的标记：
+ *      @Adaptive：该注解可以申明在类级别上，也可以申明在方法级别
+ *          方法级别：org.apache.dubbo.rpc.Protocol#export(org.apache.dubbo.rpc.Invoker)
+ *          类级别：org.apache.dubbo.common.compiler.support.AdaptiveCompiler
+ *
+ *  实现原理：
+ *      如果修饰在类级别，那么直接返回修饰的类
+ *      如果修饰在方法几倍，动态创建一个代理类（javassist）
+ *
+ * 3.激活扩展点
+ *      ExtensionLoader.getExtensionLoader(xxx.class).getActivateExtension(url, key);
  */
 public class ExtensionLoader<T> {
 
@@ -87,6 +129,7 @@ public class ExtensionLoader<T> {
 
     private static final ConcurrentMap<Class<?>, ExtensionLoader<?>> EXTENSION_LOADERS = new ConcurrentHashMap<>(64);
 
+    //扩展实例的集合
     private static final ConcurrentMap<Class<?>, Object> EXTENSION_INSTANCES = new ConcurrentHashMap<>(64);
 
     private final Class<?> type;
@@ -150,6 +193,9 @@ public class ExtensionLoader<T> {
     }
 
     @SuppressWarnings("unchecked")
+    /**
+     * 根据type获取ExtensionLoader实例
+     */
     public static <T> ExtensionLoader<T> getExtensionLoader(Class<T> type) {
         if (type == null) {
             throw new IllegalArgumentException("Extension type == null");
@@ -161,7 +207,7 @@ public class ExtensionLoader<T> {
             throw new IllegalArgumentException("Extension type (" + type +
                     ") is not an extension, because it is NOT annotated with @" + SPI.class.getSimpleName() + "!");
         }
-
+        //优化，通过内存缓存数据 ConcurrentHashMap
         ExtensionLoader<T> loader = (ExtensionLoader<T>) EXTENSION_LOADERS.get(type);
         if (loader == null) {
             EXTENSION_LOADERS.putIfAbsent(type, new ExtensionLoader<T>(type));
@@ -363,6 +409,9 @@ public class ExtensionLoader<T> {
         return (T) holder.get();
     }
 
+    /**
+     * 同样也是内存缓存
+     */
     private Holder<Object> getOrCreateHolder(String name) {
         Holder<Object> holder = cachedInstances.get(name);
         if (holder == null) {
@@ -407,6 +456,7 @@ public class ExtensionLoader<T> {
     /**
      * Find the extension with the given name. If the specified name is not found, then {@link IllegalStateException}
      * will be thrown.
+     * 根据名称获取实例对象
      */
     @SuppressWarnings("unchecked")
     public T getExtension(String name) {
@@ -422,6 +472,7 @@ public class ExtensionLoader<T> {
         }
         final Holder<Object> holder = getOrCreateHolder(name);
         Object instance = holder.get();
+        // 双重检查锁，保证安全性
         if (instance == null) {
             synchronized (holder) {
                 instance = holder.get();
@@ -624,7 +675,11 @@ public class ExtensionLoader<T> {
     }
 
     @SuppressWarnings("unchecked")
+    /**
+     * 根据名称创建一个扩展
+     */
     private T createExtension(String name, boolean wrap) {
+        //getExtensionClasses()返回一个map，key=name（扩展点的名字），clazz=name对应的扩展点类
         Class<?> clazz = getExtensionClasses().get(name);
         if (clazz == null) {
             throw findException(name);
@@ -632,15 +687,18 @@ public class ExtensionLoader<T> {
         try {
             T instance = (T) EXTENSION_INSTANCES.get(clazz);
             if (instance == null) {
+                //clazz.newInstance() 反射
                 EXTENSION_INSTANCES.putIfAbsent(clazz, clazz.newInstance());
                 instance = (T) EXTENSION_INSTANCES.get(clazz);
             }
+
+            // 依赖注入，如果说装载的这个类 依赖了其它的扩展点
             injectExtension(instance);
 
-
             if (wrap) {
-
+                //装饰类（增强）
                 List<Class<?>> wrapperClassesList = new ArrayList<>();
+                //集合 cachedWrapperClasses 会在loadDirectory()方法中将所有的包装类添加到cachedWrapperClasses集合中
                 if (cachedWrapperClasses != null) {
                     wrapperClassesList.addAll(cachedWrapperClasses);
                     wrapperClassesList.sort(WrapperComparator.COMPARATOR);
@@ -670,6 +728,11 @@ public class ExtensionLoader<T> {
         return getExtensionClasses().containsKey(name);
     }
 
+    /**
+     * 依赖注入 扩展点 setter
+     * @param instance
+     * @return
+     */
     private T injectExtension(T instance) {
 
         if (objectFactory == null) {
@@ -677,6 +740,7 @@ public class ExtensionLoader<T> {
         }
 
         try {
+            // 遍历所有的方法
             for (Method method : instance.getClass().getMethods()) {
                 if (!isSetter(method)) {
                     continue;
@@ -694,6 +758,9 @@ public class ExtensionLoader<T> {
 
                 try {
                     String property = getSetterProperty(method);
+                    //根据类和属性的名字得到扩展点，如果返回值不为空，说明它是一个扩展点
+                    // objectFactory（SpiExtensionFactory） 有三种：
+                    //      AdaptiveExtensionFactory、SpiExtensionFactory、SpringExtensionFactory
                     Object object = objectFactory.getExtension(pt, property);
                     if (object != null) {
                         method.invoke(instance, object);
@@ -751,8 +818,10 @@ public class ExtensionLoader<T> {
         return getExtensionClasses().get(name);
     }
 
+
     private Map<String, Class<?>> getExtensionClasses() {
         Map<String, Class<?>> classes = cachedClasses.get();
+        //双重检查的实现
         if (classes == null) {
             synchronized (cachedClasses) {
                 classes = cachedClasses.get();
@@ -767,13 +836,23 @@ public class ExtensionLoader<T> {
 
     /**
      * synchronized in getExtensionClasses
+     *
+     * 解析spi文件
+     * 1.根据默认配置的文件路径查找文件并解析
      */
     private Map<String, Class<?>> loadExtensionClasses() {
         cacheDefaultExtensionName();
 
         Map<String, Class<?>> extensionClasses = new HashMap<>();
 
+        // strategies 包含三种策略
+        // 1.DubboInternalLoadingStrategy   /META-INF/dubbo/internal/
+        // 2.DubboLoadingStrategy           /META-INF/dubbo/
+        // 3.ServicesLoadingStrategy        /META-INF/services/
         for (LoadingStrategy strategy : strategies) {
+            //两次调用loadDirectory()，兼容老版本
+            //strategy.directory() 扫描路径
+            //type.getName() 扫描文件名
             loadDirectory(extensionClasses, strategy.directory(), type.getName(), strategy.preferExtensionClassLoader(), strategy.overridden(), strategy.excludedPackages());
             loadDirectory(extensionClasses, strategy.directory(), type.getName().replace("org.apache", "com.alibaba"), strategy.preferExtensionClassLoader(), strategy.overridden(), strategy.excludedPackages());
         }

@@ -547,6 +547,15 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
      * Configuration priority: environment variables -> java system properties -> host property in config file ->
      * /etc/hosts -> default network address -> first available network address
      *
+     * 主机绑定的问题：
+     * 1.查找环境变量中是否存在参数[DUBBO_IP_TO_BIND]=服务注册的ip
+     * 2.读取配置文件，dobbo.protocols.dubbo.host=服务注册的ip
+     * 3.InetAddress.getLocalHost().getHostAddress() 获取本地ip地址
+     * 4.通过socket连接注册中心，从而获取本地ip
+     * 5.会轮训本地的网卡，直到找到合适的ip地址
+     * 6.上面获取的ip地址是bindip，服务注册的ip有可能不一样
+     *
+     *
      * @param protocolConfig
      * @param registryURLs
      * @param map
