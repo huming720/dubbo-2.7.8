@@ -104,7 +104,7 @@ import static org.apache.dubbo.common.constants.CommonConstants.REMOVE_VALUE_PRE
  *  解析文件，Properties文件的解析
  *  把解析出来的内容存储在内存中key(name) newInstance反射得到实例对象
  *
- * 2.自适应扩展点：在运行期间，根据上下文来决定当前返回哪个扩展点（动态代理、自动适配）
+ * 2.自适应扩展点：在运行期间，根据上下文来决定当前返回哪个扩展点（动态代理、自动适配）， 参考org.apache.dubbo.common.extension.SimpleExt$Adaptive
  *      ExtensionLoader.getExtensionLoader(xxx.class).getAdaptiveExtension();
  *      Protocol protocol = ExtensionLoader.getExtensionLoader(Protocol.class).getAdaptiveExtension();
  *      ==》 Protocol$Adaptive
