@@ -40,6 +40,7 @@ public class Transporters {
         return bind(URL.valueOf(url), handler);
     }
 
+    //绑定服务
     public static RemotingServer bind(URL url, ChannelHandler... handlers) throws RemotingException {
         if (url == null) {
             throw new IllegalArgumentException("url == null");
@@ -72,6 +73,7 @@ public class Transporters {
         } else {
             handler = new ChannelHandlerDispatcher(handlers);
         }
+        //默认netty4
         return getTransporter().connect(url, handler);
     }
 

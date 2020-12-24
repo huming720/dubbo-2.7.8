@@ -277,6 +277,10 @@ public class DubboProtocol extends AbstractProtocol {
         return DEFAULT_PORT;
     }
 
+    /**
+     * 协议层：发布dubbo协议的服务
+     * dubbo 默认采用的 Netty4(NIO) -> ServerSocket serverSocket
+     */
     @Override
     public <T> Exporter<T> export(Invoker<T> invoker) throws RpcException {
         URL url = invoker.getUrl();
@@ -284,6 +288,8 @@ public class DubboProtocol extends AbstractProtocol {
         // export service.
         String key = serviceKey(url);
         DubboExporter<T> exporter = new DubboExporter<T>(invoker, key, exporterMap);
+        //exporterMap 保存服务名称对应的服务实例的关系，调用的时候，根据key获取服务实例
+        //key:org.apache.dubbo.demo.DemoService:20880
         exporterMap.put(key, exporter);
 
         //export an stub service for dispatching event
@@ -300,14 +306,21 @@ public class DubboProtocol extends AbstractProtocol {
             }
         }
 
+        //启动一个服务监听
         openServer(url);
+        //优化序列化方式
         optimizeSerialization(url);
 
         return exporter;
     }
 
+    /**
+     * ip:port 监听Server只会启动一次
+     * @param url
+     */
     private void openServer(URL url) {
         // find server.
+        // key --> ip:port   192.168.184.48:20880
         String key = url.getAddress();
         //client can export a service which's only for server to invoke
         boolean isServer = url.getParameter(IS_SERVER_KEY, true);

@@ -54,6 +54,7 @@ public class ListenerRegistryWrapper implements Registry {
     @Override
     public void register(URL url) {
         try {
+            //registry: ZookeeperRegistry -> FailbackRegistry(失败重试)
             registry.register(url);
         } finally {
             if (CollectionUtils.isNotEmpty(listeners)) {
@@ -61,6 +62,7 @@ public class ListenerRegistryWrapper implements Registry {
                 for (RegistryServiceListener listener : listeners) {
                     if (listener != null) {
                         try {
+                            //注册完了时候触发onRegister事件
                             listener.onRegister(url);
                         } catch (RuntimeException t) {
                             logger.error(t.getMessage(), t);

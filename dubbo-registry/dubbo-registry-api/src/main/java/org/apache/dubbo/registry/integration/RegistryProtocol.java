@@ -134,6 +134,7 @@ public class RegistryProtocol implements Protocol {
     //providerurl <--> exporter
     private final ConcurrentMap<String, ExporterChangeableWrapper<?>> bounds = new ConcurrentHashMap<>();
     private Protocol protocol;
+    //inject 依赖注入扩展点
     private RegistryFactory registryFactory;
     private ProxyFactory proxyFactory;
 
@@ -174,7 +175,10 @@ public class RegistryProtocol implements Protocol {
     }
 
     private void register(URL registryUrl, URL registeredProviderUrl) {
+        //registryFactory 自适应扩展点 RegistryFactory$Adaptive
+        //registryUrl 如果为 zookeeper://ip:port...  ZookeeperRegistryFactory  ->wrapper包装器 RegistryFactoryWrapper
         Registry registry = registryFactory.getRegistry(registryUrl);
+        //registry: ListenerRegistryWrapper -> RegistryFactoryWrapper(ZookeeperRegistryFactory)
         registry.register(registeredProviderUrl);
     }
 
@@ -186,10 +190,18 @@ public class RegistryProtocol implements Protocol {
                 registered));
     }
 
+    /**
+     * 1.先发布协议服务
+     * 2.注册服务
+     *
+     * originInvoker:api接口动态代理类，调用器
+     */
     @Override
     public <T> Exporter<T> export(final Invoker<T> originInvoker) throws RpcException {
+        //zookeeper://ip:port、nacos://ip:port
         URL registryUrl = getRegistryUrl(originInvoker);
         // url to export locally
+        //dubbo://ip:port
         URL providerUrl = getProviderUrl(originInvoker);
 
         // Subscribe the override data
@@ -202,6 +214,7 @@ public class RegistryProtocol implements Protocol {
 
         providerUrl = overrideUrlWithConfig(providerUrl, overrideSubscribeListener);
         //export invoker
+        //启动一个NettyServer，发布dubbo协议的服务
         final ExporterChangeableWrapper<T> exporter = doLocalExport(originInvoker, providerUrl);
 
         // url to registry
@@ -211,6 +224,7 @@ public class RegistryProtocol implements Protocol {
         // decide if we need to delay publish
         boolean register = providerUrl.getParameter(REGISTER_KEY, true);
         if (register) {
+            //注册服务
             register(registryUrl, registeredProviderUrl);
         }
 
@@ -252,6 +266,8 @@ public class RegistryProtocol implements Protocol {
 
         return (ExporterChangeableWrapper<T>) bounds.computeIfAbsent(key, s -> {
             Invoker<?> invokerDelegate = new InvokerDelegate<>(originInvoker, providerUrl);
+            //protocol-> 具体的协议   [DubboProtocol]
+            //export()方法@Adaptive标记，自适应扩展点，动态代理Protocol$Adaptive
             return new ExporterChangeableWrapper<>((Exporter<T>) protocol.export(invokerDelegate), originInvoker);
         });
     }

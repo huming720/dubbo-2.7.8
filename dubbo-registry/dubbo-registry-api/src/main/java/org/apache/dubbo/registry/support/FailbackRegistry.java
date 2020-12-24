@@ -232,16 +232,23 @@ public abstract class FailbackRegistry extends AbstractRegistry {
             logger.info("URL " + url + " will not be registered to Registry. Registry " + url + " does not accept service of this protocol type.");
             return;
         }
+        //缓存url
         super.register(url);
         removeFailedRegistered(url);
         removeFailedUnregistered(url);
         try {
-            // Sending a registration request to the server side
+            // Sending a registration request to the server side、
+            //真正注册中心注册服务（模板方法）
             doRegister(url);
+
+            //出现异常捕获异常
         } catch (Exception e) {
+
             Throwable t = e;
 
             // If the startup detection is opened, the Exception is thrown directly.
+            // check: 检查注册中心
+            // dubbo.registry.check = true/false
             boolean check = getUrl().getParameter(Constants.CHECK_KEY, true)
                     && url.getParameter(Constants.CHECK_KEY, true)
                     && !CONSUMER_PROTOCOL.equals(url.getProtocol());
@@ -250,6 +257,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
                 if (skipFailback) {
                     t = t.getCause();
                 }
+                // check为true 抛出注册中心连不上异常，否则，记录失败的请求，进行服务发布重试
                 throw new IllegalStateException("Failed to register " + url + " to registry " + getUrl().getAddress() + ", cause: " + t.getMessage(), t);
             } else {
                 logger.error("Failed to register " + url + ", waiting for retry, cause: " + t.getMessage(), t);

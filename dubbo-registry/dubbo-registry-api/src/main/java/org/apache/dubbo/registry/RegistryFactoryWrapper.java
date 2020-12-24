@@ -29,8 +29,15 @@ public class RegistryFactoryWrapper implements RegistryFactory {
         this.registryFactory = registryFactory;
     }
 
+    /**
+     * 最终返回的对象：ListenerRegistryWrapper(ZookeeperRegistryFactory)
+     * @param url Registry address, is not allowed to be empty
+     * @return
+     */
     @Override
     public Registry getRegistry(URL url) {
+        // ListenerRegistryWrapper  注册后事件监听
+        //registryFactory -> AbstractRegistryFactory -> ZookeeperRegistryFactory
         return new ListenerRegistryWrapper(registryFactory.getRegistry(url),
                 Collections.unmodifiableList(ExtensionLoader.getExtensionLoader(RegistryServiceListener.class)
                         .getActivateExtension(url, "registry.listeners")));

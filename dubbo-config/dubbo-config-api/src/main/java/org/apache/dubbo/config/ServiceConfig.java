@@ -457,16 +457,20 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
 
             // export to local if the config is not remote (export to remote only when config is remote)
             if (!SCOPE_REMOTE.equalsIgnoreCase(scope)) {
+                // 服务发布在本地，在当前jvm使用，injvm:// 协议发布，服务调用是本地调用
                 exportLocal(url);
             }
             // export to remote if the config is not local (export to local only when config is local)
+            //远程服务发布
             if (!SCOPE_LOCAL.equalsIgnoreCase(scope)) {
                 if (CollectionUtils.isNotEmpty(registryURLs)) {
+                    //多注册中心
                     for (URL registryURL : registryURLs) {
                         //if protocol is only injvm ,not register
                         if (LOCAL_PROTOCOL.equalsIgnoreCase(url.getProtocol())) {
                             continue;
                         }
+                        //添加参数
                         url = url.addParameterIfAbsent(DYNAMIC_KEY, registryURL.getParameter(DYNAMIC_KEY));
                         URL monitorUrl = ConfigValidationUtils.loadMonitor(this, registryURL);
                         if (monitorUrl != null) {
@@ -481,14 +485,21 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
                         }
 
                         // For providers, this is used to enable custom proxy to generate invoker
+                        ///动态代理的扩展
                         String proxy = url.getParameter(PROXY_KEY);
                         if (StringUtils.isNotEmpty(proxy)) {
+                            // registry://ip:port
                             registryURL = registryURL.addParameter(PROXY_KEY, proxy);
                         }
 
+                        // invoker:调用器
+                        //url --> invoker.getUrl()
                         Invoker<?> invoker = PROXY_FACTORY.getInvoker(ref, (Class) interfaceClass, registryURL.addParameterAndEncoded(EXPORT_KEY, url.toFullString()));
                         DelegateProviderMetaDataInvoker wrapperInvoker = new DelegateProviderMetaDataInvoker(invoker, this);
 
+                        //此时，PROTOCOL
+                        // ==> RegistryProtocol.java 对应的包装类
+                        // ==>ProtocolFilterWrapper(ProtocolListenerWrapper(QosProtocolWrapper(RegistryProtocol)))
                         Exporter<?> exporter = PROTOCOL.export(wrapperInvoker);
                         exporters.add(exporter);
                     }

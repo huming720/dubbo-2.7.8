@@ -118,8 +118,12 @@ import static org.apache.dubbo.common.constants.CommonConstants.REMOVE_VALUE_PRE
  *      如果修饰在类级别，那么直接返回修饰的类
  *      如果修饰在方法几倍，动态创建一个代理类（javassist）
  *
- * 3.激活扩展点
+ * 3.激活扩展点：类上标记 @Activate(group = {CONSUMER, PROVIDER}, value = CACHE_KEY) CacheFilter.java
+ *      类比Spring中的@ConditionalOnBean(XXX.class)
  *      ExtensionLoader.getExtensionLoader(xxx.class).getActivateExtension(url, key);
+ *
+ *      @Activate(group = CommonConstants.PROVIDER, order = -110000)
+ *      public class EchoFilter implements Filter(无需条件，默认激活)
  */
 public class ExtensionLoader<T> {
 
@@ -1103,6 +1107,7 @@ public class ExtensionLoader<T> {
 
     private Class<?> getAdaptiveExtensionClass() {
         getExtensionClasses();
+        //如果当前加载的扩展点存在自适应的类(类上标注@Adaptive注解)，那么直接返回；否则，回动态创建一个字节码，然后进行返回。
         if (cachedAdaptiveClass != null) {
             return cachedAdaptiveClass;
         }
@@ -1110,8 +1115,10 @@ public class ExtensionLoader<T> {
     }
 
     private Class<?> createAdaptiveExtensionClass() {
+        //动态组装
         String code = new AdaptiveClassCodeGenerator(type, cachedDefaultName).generate();
         ClassLoader classLoader = findClassLoader();
+        // 直接返回AdaptiveCompiler类（类上标记了@Adaptive）
         org.apache.dubbo.common.compiler.Compiler compiler = ExtensionLoader.getExtensionLoader(org.apache.dubbo.common.compiler.Compiler.class).getAdaptiveExtension();
         return compiler.compile(code, classLoader);
     }
