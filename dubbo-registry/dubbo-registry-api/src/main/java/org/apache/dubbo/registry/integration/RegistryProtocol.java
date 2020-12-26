@@ -268,6 +268,7 @@ public class RegistryProtocol implements Protocol {
             Invoker<?> invokerDelegate = new InvokerDelegate<>(originInvoker, providerUrl);
             //protocol-> 具体的协议   [DubboProtocol]
             //export()方法@Adaptive标记，自适应扩展点，动态代理Protocol$Adaptive
+            //invokerDelegate.getUrl() -> providerUrl (dubbo://ip:port)
             return new ExporterChangeableWrapper<>((Exporter<T>) protocol.export(invokerDelegate), originInvoker);
         });
     }
@@ -371,9 +372,22 @@ public class RegistryProtocol implements Protocol {
     }
 
     protected URL getRegistryUrl(Invoker<?> originInvoker) {
+        /**
+         * registryUrl ->
+         * registry://192.168.184.48:8848/org.apache.dubbo.registry.RegistryServic
+         * ?application=spring-boot-dubbo-sample-provider&dubbo=2.0.2
+         * &export=dubbo://192.168.97.41%3A20880/com.gupaoedu.springboot.dubbo.IDemoService
+         * &anyhost=true&application=spring-boot-dubbo-sample-provider&bind.ip=192.168.97.41
+         * &bind.port=20880&deprecated=false&dubbo=2.0.2&dynamic=true&generic=false
+         * &interface=com.gupaoedu.springboot.dubbo.IDemoService&metadata-type=remote
+         * &methods=index&pid=74492&qos.enable=false&release=2.7.8&side=provider&timestamp=1608876794873&pid=74492
+         * &qos.enable=false&registry=nacos&release=2.7.8&timestamp=1608876740109
+         */
         URL registryUrl = originInvoker.getUrl();
         if (REGISTRY_PROTOCOL.equals(registryUrl.getProtocol())) {
+            //从url参数中找到registry的值，此时为nacos, 即protocol = nacos
             String protocol = registryUrl.getParameter(REGISTRY_KEY, DEFAULT_REGISTRY);
+            //替换协议  nacos://ip:port  url驱动
             registryUrl = registryUrl.setProtocol(protocol).removeParameter(REGISTRY_KEY);
         }
         return registryUrl;
@@ -429,6 +443,7 @@ public class RegistryProtocol implements Protocol {
      * @return
      */
     private URL getProviderUrl(final Invoker<?> originInvoker) {
+        // export-> dubbo://192.168.97.41:20880/com.gupaoedu.springboot.dubbo.IDemoService?anyhost=true&application=spring-boot-dubbo-sample-provider&bind.ip=192.168.97.41&bind.port=20880&deprecated=false&dubbo=2.0.2&dynamic=true&generic=false&interface=com.gupaoedu.springboot.dubbo.IDemoService&metadata-type=remote&methods=index&pid=74492&qos.enable=false&release=2.7.8&side=provider&timestamp=1608876794873
         String export = originInvoker.getUrl().getParameterAndDecoded(EXPORT_KEY);
         if (export == null || export.length() == 0) {
             throw new IllegalArgumentException("The registry export url is null! registry: " + originInvoker.getUrl());
