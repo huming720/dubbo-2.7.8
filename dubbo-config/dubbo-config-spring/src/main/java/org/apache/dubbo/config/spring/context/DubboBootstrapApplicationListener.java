@@ -29,6 +29,8 @@ import org.springframework.core.Ordered;
  * and {@link ContextClosedEvent} raised
  *
  * @since 2.7.5
+ *
+ * ApplicationListener 观察者设计模式
  */
 public class DubboBootstrapApplicationListener extends OneTimeExecutionApplicationContextEventListener
         implements Ordered {
@@ -48,6 +50,7 @@ public class DubboBootstrapApplicationListener extends OneTimeExecutionApplicati
 
     @Override
     public void onApplicationContextEvent(ApplicationContextEvent event) {
+        // ContextRefreshedEvent:ApplicationContext被初始化或刷新时，该事件被触发
         if (event instanceof ContextRefreshedEvent) {
             onContextRefreshedEvent((ContextRefreshedEvent) event);
         } else if (event instanceof ContextClosedEvent) {
@@ -56,6 +59,7 @@ public class DubboBootstrapApplicationListener extends OneTimeExecutionApplicati
     }
 
     private void onContextRefreshedEvent(ContextRefreshedEvent event) {
+        //dubbo入口
         dubboBootstrap.start();
     }
 

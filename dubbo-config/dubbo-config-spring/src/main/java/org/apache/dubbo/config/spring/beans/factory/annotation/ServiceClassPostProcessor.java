@@ -126,11 +126,13 @@ public class ServiceClassPostProcessor implements BeanDefinitionRegistryPostProc
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
 
         // @since 2.7.5
+        //dubbo服务发布，DubboBootstrapApplicationListener 事件监听
         registerInfrastructureBean(registry, DubboBootstrapApplicationListener.BEAN_NAME, DubboBootstrapApplicationListener.class);
 
         Set<String> resolvedPackagesToScan = resolvePackagesToScan(packagesToScan);
 
         if (!CollectionUtils.isEmpty(resolvedPackagesToScan)) {
+            //ioc注入
             registerServiceBeans(resolvedPackagesToScan, registry);
         } else {
             if (logger.isWarnEnabled()) {
@@ -172,6 +174,7 @@ public class ServiceClassPostProcessor implements BeanDefinitionRegistryPostProc
             if (!CollectionUtils.isEmpty(beanDefinitionHolders)) {
 
                 for (BeanDefinitionHolder beanDefinitionHolder : beanDefinitionHolders) {
+                    // IOC注入
                     registerServiceBean(beanDefinitionHolder, registry, scanner);
                 }
 
