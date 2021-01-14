@@ -31,6 +31,19 @@ public class Application {
     /**
      * In order to make sure multicast registry works, need to specify '-Djava.net.preferIPv4Stack=true' before
      * launch the application
+     *
+     * 服务的消费：
+     * - 生成远程服务的代理
+     * - 获得目标服务的URL地址
+     * - 还需要建立和注册中心的动态感知
+     * - 网络连接的建立（启动的时候建立连接,还是通信的时候建立连接）->Dubbo(Nio)
+     * - 服务通信的过程中
+     * -  - filter过滤
+     * -  - 负载均衡
+     * -  - 容错
+     *
+     *
+     * Dubbo新版本中，对于失败重试，采用了时间轮
      */
     public static void main(String[] args) {
         AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(ConsumerConfiguration.class);

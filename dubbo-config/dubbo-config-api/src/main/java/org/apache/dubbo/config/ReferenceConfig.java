@@ -202,6 +202,7 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
             throw new IllegalStateException("The invoker of ReferenceConfig(" + url + ") has already destroyed!");
         }
         if (ref == null) {
+            // 动态代理生成ref
             init();
         }
         return ref;
@@ -242,6 +243,7 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
         checkStubAndLocal(interfaceClass);
         ConfigValidationUtils.checkMock(interfaceClass, this);
 
+        //map：解析配置（配置是双向配置的，服务端、客户端、全局都可以配置，按照优先级处理）
         Map<String, String> map = new HashMap<String, String>();
         map.put(SIDE_KEY, CONSUMER_SIDE);
 
@@ -292,6 +294,8 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
             }
         }
 
+        // 消费端也会注册到注册中心上
+        // consumer://
         String hostToRegistry = ConfigUtils.getSystemProperty(DUBBO_IP_TO_REGISTRY);
         if (StringUtils.isEmpty(hostToRegistry)) {
             hostToRegistry = NetUtils.getLocalHost();
@@ -302,6 +306,9 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
 
         serviceMetadata.getAttachments().putAll(map);
 
+        // 构建一个动态代理
+        // 如果有多个注册中心？
+        // 服务地址的发现和远程连接的建立？（从本地内存中加载服务提供者的列表（其中内存和注册中心动态感知））
         ref = createProxy(map);
 
         serviceMetadata.setTarget(ref);

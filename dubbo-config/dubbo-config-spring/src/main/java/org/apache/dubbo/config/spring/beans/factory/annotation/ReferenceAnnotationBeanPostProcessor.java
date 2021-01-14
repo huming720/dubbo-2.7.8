@@ -118,6 +118,16 @@ public class ReferenceAnnotationBeanPostProcessor extends AbstractAnnotationBean
         return Collections.unmodifiableMap(injectedMethodReferenceBeanCache);
     }
 
+    /**
+     * 实例化的时候，获取依赖的bean
+     * @param attributes
+     * @param bean
+     * @param beanName
+     * @param injectedType
+     * @param injectedElement
+     * @return
+     * @throws Exception
+     */
     @Override
     protected Object doGetInjectedBean(AnnotationAttributes attributes, Object bean, String beanName, Class<?> injectedType,
                                        InjectionMetadata.InjectedElement injectedElement) throws Exception {
@@ -131,6 +141,9 @@ public class ReferenceAnnotationBeanPostProcessor extends AbstractAnnotationBean
          */
         String referenceBeanName = getReferenceBeanName(attributes, injectedType);
 
+        // 初始化referenceBean，后面调用registerReferenceBean()注入ioc容器
+        // 只会初始化一个referenceBean到IOC容器中去
+        //referenceBean -> FactoryBean,getObject()返回由FactoryBean创建的Bean实例,如果isSingleton()返回true，则该实例会放到Spring容器中单实例缓存池中
         ReferenceBean referenceBean = buildReferenceBeanIfAbsent(referenceBeanName, attributes, injectedType);
 
         boolean localServiceBean = isLocalServiceBean(referencedBeanName, referenceBean, attributes);
