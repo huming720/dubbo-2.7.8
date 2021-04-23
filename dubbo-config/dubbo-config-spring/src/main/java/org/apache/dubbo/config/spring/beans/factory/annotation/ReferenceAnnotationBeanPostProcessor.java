@@ -54,6 +54,8 @@ import static org.springframework.util.StringUtils.hasText;
  * @see Reference
  * @see com.alibaba.dubbo.config.annotation.Reference
  * @since 2.5.7
+ *
+ * Dubbo服务消费入口  依赖注入bean的时候，会调用后置处理器BeanPostProcessor
  */
 public class ReferenceAnnotationBeanPostProcessor extends AbstractAnnotationBeanPostProcessor implements
         ApplicationContextAware {

@@ -43,6 +43,9 @@ public class InvokerInvocationHandler implements InvocationHandler {
         }
     }
 
+    /**
+     * 服务消费真正调用的方法
+     */
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
         if (method.getDeclaringClass() == Object.class) {
@@ -71,6 +74,7 @@ public class InvokerInvocationHandler implements InvocationHandler {
             rpcInvocation.put(Constants.METHOD_MODEL, consumerModel.getMethodModel(method));
         }
 
+        // 发起远程调用
         return invoker.invoke(rpcInvocation).recreate();
     }
 }

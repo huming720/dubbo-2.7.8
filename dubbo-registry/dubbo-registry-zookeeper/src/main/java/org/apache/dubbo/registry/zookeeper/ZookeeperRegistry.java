@@ -144,6 +144,7 @@ public class ZookeeperRegistry extends FailbackRegistry {
         }
     }
 
+    // zookeeper订阅节点变化
     @Override
     public void doSubscribe(final URL url, final NotifyListener listener) {
         try {

@@ -125,7 +125,7 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
 
     // Map<url, Invoker> cache service url to invoker mapping.
     private volatile Map<String, Invoker<T>> urlInvokerMap; // The initial value is null and the midway may be assigned to null, please use the local variable reference
-    private volatile List<Invoker<T>> invokers;
+    private volatile List<Invoker<T>> invokers; // url -> 具体协议的invoker
 
     // Set<invokerUrls> cache invokeUrls to invokers mapping.
     private volatile Set<URL> cachedInvokerUrls; // The initial value is null and the midway may be assigned to null, please use the local variable reference
@@ -180,8 +180,10 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
 
     public void subscribe(URL url) {
         setConsumerUrl(url);
+        // RegistryDirectory 不仅是服务地址列表的管理 还是监听器NotifyListener
         CONSUMER_CONFIGURATION_LISTENER.addNotifyListener(this);
         serviceConfigurationListener = new ReferenceConfigurationListener(this, url);
+        // registry -> ListenerRegistryWrapper(ZookeeperRegistry)
         registry.subscribe(url, this);
     }
 

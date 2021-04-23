@@ -325,8 +325,16 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
         dispatch(new ReferenceConfigInitializedEvent(this, invoker));
     }
 
-    @SuppressWarnings({"unchecked", "rawtypes", "deprecation"})
+    /**
+     * createProxy，构建一个动态代理
+     * 如果有多个注册中心？
+     * 服务地址的发现
+     * 远程连接的建立
+     * @param map url驱动参数
+     * @return
+     */
     private T createProxy(Map<String, String> map) {
+        // 是否同jvm调用
         if (shouldJvmRefer(map)) {
             URL url = new URL(LOCAL_PROTOCOL, LOCALHOST_VALUE, 0, interfaceClass.getName()).addParameters(map);
             invoker = REF_PROTOCOL.refer(interfaceClass, url);
@@ -335,6 +343,7 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
             }
         } else {
             urls.clear();
+            // url ->  <dubbo:reference url="dubbo://ip:port1,dubbo://ip:port2"/> 点对点调用
             if (url != null && url.length() > 0) { // user specified URL, could be peer-to-peer address, or register center's address.
                 String[] us = SEMICOLON_SPLIT_PATTERN.split(url);
                 if (us != null && us.length > 0) {
@@ -353,7 +362,12 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
             } else { // assemble URL from register center's configuration
                 // if protocols not injvm checkRegistry
                 if (!LOCAL_PROTOCOL.equalsIgnoreCase(getProtocol())) {
+                    //检查注册中心的配置 dubbo.registry.nacos=
                     checkRegistry();
+                    //us:注册中心的地址列表
+                    //zookeeper + nacos 多注册中心
+                    // 0-registry://192.168.184.48:2181/xxx
+                    // 1-registry://192.168.184.48:8848/xxx
                     List<URL> us = ConfigValidationUtils.loadRegistries(this, false);
                     if (CollectionUtils.isNotEmpty(us)) {
                         for (URL u : us) {
@@ -361,6 +375,7 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
                             if (monitorUrl != null) {
                                 map.put(MONITOR_KEY, URL.encode(monitorUrl.toFullString()));
                             }
+                            //urls 注册中心的地址列表
                             urls.add(u.addParameterAndEncoded(REFER_KEY, StringUtils.toQueryString(map)));
                         }
                     }
@@ -371,6 +386,7 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
             }
 
             if (urls.size() == 1) {
+                //REF_PROTOCOL -> RegistryProtocol
                 invoker = REF_PROTOCOL.refer(interfaceClass, urls.get(0));
             } else {
                 List<Invoker<?>> invokers = new ArrayList<Invoker<?>>();
@@ -385,6 +401,7 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
                     // for multi-subscription scenario, use 'zone-aware' policy by default
                     String cluster = registryURL.getParameter(CLUSTER_KEY, ZoneAwareCluster.NAME);
                     // The invoker wrap sequence would be: ZoneAwareClusterInvoker(StaticDirectory) -> FailoverClusterInvoker(RegistryDirectory, routing happens here) -> Invoker
+                    //StaticDirectory-> 维护服务注册中心的invokers
                     invoker = Cluster.getCluster(cluster, false).join(new StaticDirectory(registryURL, invokers));
                 } else { // not a registry url, must be direct invoke.
                     String cluster = CollectionUtils.isNotEmpty(invokers)
@@ -409,6 +426,7 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
             metadataService.publishServiceDefinition(consumerURL);
         }
         // create service proxy
+        // PROXY_FACTORY -> JavassistProxyFactory
         return (T) PROXY_FACTORY.getProxy(invoker, ProtocolUtils.isGeneric(generic));
     }
 
